@@ -1,0 +1,60 @@
+---
+- hosts: all
+
+  tasks:
+
+    - file: path=/srv/nginx-proxy/certs state=directory
+      become: yes
+    - file: path=/srv/nginx-proxy/vhost.d state=directory
+      become: yes
+    - file: path=/srv/nginx-proxy/htpasswd state=directory
+      become: yes
+    - file: path=/srv/nginx-proxy/conf.d state=directory
+      become: yes
+
+    - lineinfile:
+        dest: /srv/nginx-proxy/conf.d/custom.conf
+        regexp: '^client_max_body_size'
+        line: 'client_max_body_size 300m;'
+        create: yes
+      become: yes
+
+
+    - name: Run nginx-proxy
+      docker_container:
+        name: nginx
+        image: 'registry.it.vm:6000/cit/nginx:latest'
+        state: started
+        restart_policy: always
+        ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - '/srv/nginx-proxy/certs:/etc/nginx/certs'
+          - '/srv/nginx-proxy/conf.d:/etc/nginx/conf.d'
+          - '/srv/nginx-proxy/vhost.d:/etc/nginx/vhost.d'
+          - '/srv/nginx-proxy/htpasswd:/etc/nginx/htpasswd'
+          - '/var/run/docker.sock:/tmp/docker.sock:ro'
+
+    - file: path=/srv/docker-gen/templates state=directory
+      become: yes
+
+    - get_url: url=https://raw.githubusercontent.com/jwilder/nginx-proxy/master/nginx.tmpl dest=/srv/docker-gen/templates
+      become: yes
+
+    - name: Run docker-gen
+      docker_container:
+        name: docker-gen
+        image: 'registry.it.vm:6000/cit/docker-gen:latest'
+        state: started
+        restart_policy: always
+        volumes:
+          - '/srv/docker-gen/templates:/etc/docker-gen/templates'
+        command: '-notify-sighup nginx -watch /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf'
+        volumes_from:
+          - nginx
+
+# registry NepalAhead
+
+# $JAVA_HOME/bin/java -cp /opt/sonatype/nexus/system/org/eclipse/jetty/jetty-util/9.3.7.v20160115/jetty-util-9.3.7.v20160115.jar org.eclipse.jetty.util.security.Password
+# $JAVA_HOME/bin/keytool -importkeystore -srckeystore /nexus-data/registry.it.vm.pkcs12 -srcstoretype PKCS12 -destkeystore keystore.jks

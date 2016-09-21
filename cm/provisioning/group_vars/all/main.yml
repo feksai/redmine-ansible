@@ -1,0 +1,75 @@
+---
+ntp_timezone: Europe/Moscow
+
+apt_packages:
+  - mc
+  - vim
+  - htop
+  - bzip2
+  - ca-certificates
+  - curl
+  - libffi-dev
+  - libgdbm3
+  - libssl-dev
+  - libyaml-dev
+  - procps
+  - zlib1g-dev
+  - imagemagick
+  - libpq5
+  - libsqlite3-0
+  - bzr
+  - git
+  - mercurial
+  - subversion
+  - openssh-client
+  - gcc
+  - libmagickcore-dev
+  - libmagickwand-dev
+  #- libmysqlclient-dev
+  - libpq-dev
+#  - libsqlite3-dev
+  - make
+  - patch
+
+
+ruby_version: 2.3
+
+redmine_version: 3.3.0
+
+redmine_install_dir: '/opt/srv/redmine-{{ redmine_version }}'
+
+custom_gemfile: |
+                 gem 'puma'
+
+postgresql_version: 9.5
+postgresql_encoding: 'UTF-8'
+postgresql_locale: 'ru_RU.UTF-8'
+
+postgresql_admin_user: "postgres"
+postgresql_default_auth_method: "trust"
+postgresql_listen_addresses:
+  - 0.0.0.0
+
+postgresql_pg_hba_passwd_hosts:
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+
+postgresql_cluster_name: "main"
+postgresql_cluster_reset: false
+postgresql_timezone: Europe/Moscow
+postgresql_log_timezone: Europe/Moscow
+
+postgresql_databases:
+  - name: "redmine"
+    owner: "user_redmine"
+
+postgresql_users:
+  - name: "user_redmine"
+    pass: "dhjE#_3w3sKD"
+    encrypted: "no"
+
+postgresql_user_privileges:
+  - name: "user_redmine"
+    db: "redmine"
+    priv: "ALL"

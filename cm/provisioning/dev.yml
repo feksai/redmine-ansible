@@ -1,0 +1,74 @@
+# Окружение для разработки
+---
+- hosts: local
+  become: yes
+
+  # pre_tasks:
+
+  #   - name: "Autofollow to project on logon"
+  #     lineinfile:
+  #       dest: "/home/vagrant/.bashrc"
+  #       regexp: "^cd /vagrant"
+  #       line: "cd /vagrant"
+
+  #   - name: В системе должен быть установлен add-apt-repository
+  #     apt: name=software-properties-common state=present
+
+  #   - name: Добавить репозиторий с пакетами Python 2.7
+  #     apt_repository: repo="ppa:fkrull/deadsnakes-python2.7"
+
+  #   - name: установить Python 2.7
+  #     apt: name="python2.7" state=latest only_upgrade=yes
+
+  roles:
+    - role: ntp
+    - role: apt
+    - role: ruby-brightbox
+
+- hosts: local
+  become: no
+
+  tasks:
+    - block:
+        - name: Create temp directory
+          shell: 'mktemp -d -t redmine.XXXXXXXXXX'
+          register: mktemp
+
+        - name: Download redmine archive
+          get_url:
+            url: 'http://www.redmine.org/releases/redmine-{{ redmine_version }}.tar.gz'
+            dest: '{{ mktemp.stdout }}/redmine-{{ redmine_version }}.tar.gz'
+
+        - name: Ensure redmine directory exists
+          file:
+            path: '{{ redmine_install_dir }}'
+            state: directory
+
+        - name: Unpack redmine archive
+          unarchive:
+            src: '{{ mktemp.stdout }}/redmine-{{ redmine_version }}.tar.gz'
+            dest: '{{ redmine_install_dir }}'
+            creates: '{{ redmine_install_dir }}'
+
+        - name: Add custom gems
+          copy:
+            content: '{{ custom_gemfile }}'
+            dest: '{{ redmine_install_dir }}/Gemfile.local'
+
+        - name: Bundle install
+          bundler:
+            state: present
+            user_install: yes
+            chdir: '{{ redmine_install_dir }}'
+            extra_args: '--jobs=4 --without development test sqlite3 mysql2 mysql'
+          environment:
+            RAILS_ENV: 'production'
+          retries: 2
+          delay: 10
+
+      always:
+        - name: Remove temp directory
+          file:
+            path: '{{ mktemp.stdout }}'
+            state: absent
+          when: mktemp is defined
