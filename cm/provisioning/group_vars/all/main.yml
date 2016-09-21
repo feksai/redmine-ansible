@@ -30,16 +30,23 @@ apt_packages:
 #  - libsqlite3-dev
   - make
   - patch
+  - ruby2.3-dev
 
 
 ruby_version: 2.3
 
 redmine_version: 3.3.0
 
-redmine_install_dir: '/opt/srv/redmine-{{ redmine_version }}'
+redmine_install_dir: '/opt/srv'
 
 custom_gemfile: |
                  gem 'puma'
+
+access_to_directories:
+  - files
+  - log
+  - tmp
+  - .bundle
 
 postgresql_version: 9.5
 postgresql_encoding: 'UTF-8'
@@ -66,10 +73,32 @@ postgresql_databases:
 
 postgresql_users:
   - name: "user_redmine"
-    pass: "dhjE#_3w3sKD"
+    pass: "dhjE&_3w3sKD"
     encrypted: "no"
 
 postgresql_user_privileges:
   - name: "user_redmine"
     db: "redmine"
     priv: "ALL"
+
+
+# nginx
+nginx_configs:
+  proxy:
+    - proxy_set_header X-Real-IP  $remote_addr
+    - proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
+    - proxy_set_header Host $host:$server_port
+  upstream:
+    - upstream redmine { server unix://{{ redmine_install_dir }}/redmine-{{ redmine_version }}/tmp/puma.sock; }
+nginx_remove_sites:  [ default ]
+nginx_sites:
+  redmine:
+    - listen 80
+    - root {{ redmine_install_dir }}/redmine-{{ redmine_version }}/public
+    - client_max_body_size 300M
+    - proxy_read_timeout 1000
+    - location / { proxy_pass http://redmine; }
+    - location ~ ^/(assets)/ {
+        gzip_static on;
+        expires max;
+        add_header Cache-Control public; }

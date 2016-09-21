@@ -20,7 +20,7 @@ $PROVISION_SCRIPT = <<SCRIPT
 SCRIPT
 
 Vagrant.configure(2) do |config|
-  ram = 512
+  ram = 1024
   cpu = 2
   dev_ip = '192.168.77.47'
 
@@ -40,7 +40,8 @@ Vagrant.configure(2) do |config|
     dev.vm.post_up_message = "Ready to development. Use \'vagrant ssh\' and \'bundle install\' after. \
     \nVirtual machine ip address: #{dev_ip}"
 
-    config.vm.provision "ansible" do |ansible|
+    config.vm.provision "ansible_local" do |ansible|
+      ansible.provisioning_path = "/vagrant/cm"
       ansible.playbook = "provisioning/dev.yml"
     end
   end
