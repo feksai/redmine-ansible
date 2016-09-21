@@ -28,6 +28,8 @@
 
         - name: unpack
           shell: 'tar -xzf {{ mktemp.stdout }}/redmine.tar.gz -C {{ redmine_install_dir }}'
+          args:
+            creates: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
 
       always:
         - name: Remove temp directory
@@ -36,13 +38,14 @@
             state: absent
           when: mktemp is defined
 
-        - name: Ensure permissions
-          file:
-            path: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
-            state: directory
-            owner: root
-            group: root
-            mode: 0755
+    - name: Ensure permissions
+      file:
+        path: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
+        state: directory
+        owner: '{{ ansible_ssh_user }}'
+        group: '{{ ansible_ssh_user }}'
+        recurse: yes
+        mode: 0755
 
     - name: Add custom gems
       copy:
@@ -71,7 +74,10 @@
       file:
         path: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/{{ item }}'
         state: directory
-        mode: 0777
+        owner: redmine
+        group: redmine
+        recurse: yes
+        mode: 0755
       with_items: '{{ access_to_directories }}'
 
 - hosts: all
@@ -94,6 +100,7 @@
         chdir: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
       environment:
         RAILS_ENV: production
+      become_user: redmine
 
     - name: Load default database
       shell: 'bundle exec rake redmine:load_default_data'
@@ -102,6 +109,16 @@
       environment:
         RAILS_ENV: production
         REDMINE_LANG: ru
+      become_user: redmine
+
+    - name: Generate secret token for sessions
+      shell: 'bundle exec rake generate_secret_token'
+      args:
+        chdir: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
+        creates: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/initializers/secret_token.rb'
+      environment:
+        RAILS_ENV: production
+      become_user: redmine
 
 - hosts: all
   become: yes

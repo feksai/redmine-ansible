@@ -25,9 +25,7 @@ apt_packages:
   - gcc
   - libmagickcore-dev
   - libmagickwand-dev
-  #- libmysqlclient-dev
   - libpq-dev
-#  - libsqlite3-dev
   - make
   - patch
   - ruby2.3-dev
@@ -46,7 +44,6 @@ access_to_directories:
   - files
   - log
   - tmp
-  - .bundle
 
 postgresql_version: 9.5
 postgresql_encoding: 'UTF-8'
