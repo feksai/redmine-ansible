@@ -1,0 +1,19 @@
+# Usage:
+#   sudo service redmine {start,stop,restart,status}
+
+description "Puma Background Worker for {{ app_name }}"
+
+env RAILS_ENV=production
+
+# no "start on", we don't want to automatically start
+stop on runlevel [06]
+
+setuid redmine
+setgid redmine
+
+respawn
+respawn limit 3 30
+
+chdir {{ redmine_install_dir }}/redmine-{{ redmine_version }}
+
+exec sudo -u redmine /bin/bash -c "RAILS_ENV=production bundle exec puma"

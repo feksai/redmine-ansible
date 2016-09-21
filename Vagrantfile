@@ -39,7 +39,10 @@ Vagrant.configure(2) do |config|
     dev.ssh.forward_agent = true
     dev.vm.post_up_message = "Ready to development. Use \'vagrant ssh\' and \'bundle install\' after. \
     \nVirtual machine ip address: #{dev_ip}"
-    dev.vm.provision 'shell', keep_color: true, inline: $PROVISION_SCRIPT
+
+    config.vm.provision "ansible" do |ansible|
+      ansible.playbook = "provisioning/dev.yml"
+    end
   end
 
   # Use vagrant-cachier to cache apt-get, gems and other stuff across machines

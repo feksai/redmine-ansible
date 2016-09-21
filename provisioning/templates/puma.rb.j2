@@ -1,0 +1,14 @@
+#!/usr/bin/env puma
+
+# start puma with:
+# RAILS_ENV=production bundle exec puma -C ./config/puma.rb
+
+application_path = "#{Dir.pwd}"
+directory application_path
+environment 'production'
+pidfile "#{application_path}/tmp/puma.pid"
+state_path "#{application_path}/tmp/puma.state"
+stdout_redirect "#{application_path}/log/puma.stdout.log", "#{application_path}/log/puma.stderr.log"
+daemonize false
+bind "unix://#{application_path}/tmp/puma.sock"
+

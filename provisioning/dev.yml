@@ -1,0 +1,79 @@
+# Окружение для разработки
+---
+- hosts: all
+  become: yes
+
+  roles:
+    - role: ntp
+    - role: apt
+    - role: ruby-brightbox
+    - role: postgresql
+    - role: nginx
+
+  post_tasks:
+    - block:
+        - name: Create temp directory
+          shell: 'mktemp -d -t redmine.XXXXXXXXXX'
+          register: mktemp
+
+        - name: Download redmine archive
+          get_url:
+            url: 'http://www.redmine.org/releases/redmine-{{ redmine_version }}.tar.gz'
+            dest: '{{ mktemp.stdout }}/redmine.tar.gz'
+
+        - name: Ensure redmine directory exists
+          file:
+            path: '{{ redmine_install_dir }}'
+            state: directory
+
+        - name: unpack
+          shell: 'tar -xzf {{ mktemp.stdout }}/redmine.tar.gz -C {{ redmine_install_dir }}'
+
+        - name: Add custom gems
+          copy:
+            content: '{{ custom_gemfile }}'
+            dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/Gemfile.local'
+
+        - name: Copy redmine configuration file
+          template:
+            src: '{{ playbook_dir }}/templates/configuration.yml.j2'
+            dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/configuration.yml'
+
+        - name: Copy database configuration file
+          template:
+            src: '{{ playbook_dir }}/templates/database.yml.j2'
+            dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/database.yml'
+
+        - name: Copy puma configuration file
+          template:
+            src: '{{ playbook_dir }}/templates/puma.rb.j2'
+            dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/puma.rb'
+
+        - name: assign permissions
+          file:
+            path: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/{{ item }}'
+            state: directory
+            mode: 0777
+          with_items: '{{ access_to_directories }}'
+
+      always:
+        - name: Remove temp directory
+          file:
+            path: '{{ mktemp.stdout }}'
+            state: absent
+          when: mktemp is defined
+
+- hosts: all
+  become: no
+
+  tasks:
+    - name: Bundle install
+      bundler:
+        state: present
+        user_install: yes
+        chdir: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
+        extra_args: '--jobs=4 --without development test sqlite3 mysql2 mysql'
+      environment:
+        RAILS_ENV: 'production'
+      retries: 2
+      delay: 10

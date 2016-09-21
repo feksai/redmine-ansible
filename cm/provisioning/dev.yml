@@ -1,31 +1,14 @@
 # Окружение для разработки
 ---
-- hosts: local
+- hosts: all
   become: yes
-
-  # pre_tasks:
-
-  #   - name: "Autofollow to project on logon"
-  #     lineinfile:
-  #       dest: "/home/vagrant/.bashrc"
-  #       regexp: "^cd /vagrant"
-  #       line: "cd /vagrant"
-
-  #   - name: В системе должен быть установлен add-apt-repository
-  #     apt: name=software-properties-common state=present
-
-  #   - name: Добавить репозиторий с пакетами Python 2.7
-  #     apt_repository: repo="ppa:fkrull/deadsnakes-python2.7"
-
-  #   - name: установить Python 2.7
-  #     apt: name="python2.7" state=latest only_upgrade=yes
 
   roles:
     - role: ntp
     - role: apt
     - role: ruby-brightbox
 
-- hosts: local
+- hosts: all
   become: no
 
   tasks:

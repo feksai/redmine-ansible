@@ -246,6 +246,7 @@ node_modules
 
 .env.local
 cm/roles/
+provisioning/roles/
 config/local.yml
 
 #Webpack compiled files
