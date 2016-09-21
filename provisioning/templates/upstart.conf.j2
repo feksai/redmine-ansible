@@ -1,7 +1,7 @@
 # Usage:
 #   sudo service redmine {start,stop,restart,status}
 
-description "Puma Background Worker for {{ app_name }}"
+description "Puma Background Worker for redmine"
 
 env RAILS_ENV=production
 
@@ -16,4 +16,4 @@ respawn limit 3 30
 
 chdir {{ redmine_install_dir }}/redmine-{{ redmine_version }}
 
-exec sudo -u redmine /bin/bash -c "RAILS_ENV=production bundle exec puma"
+exec /bin/bash -c "RAILS_ENV=production bundle exec puma -C config/puma.rb"

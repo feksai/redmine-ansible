@@ -46,6 +46,7 @@ access_to_directories:
   - files
   - log
   - tmp
+  - .bundle
 
 postgresql_version: 9.5
 postgresql_encoding: 'UTF-8'

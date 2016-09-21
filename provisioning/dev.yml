@@ -5,8 +5,8 @@
 
   roles:
     - role: ntp
-    - role: apt
     - role: ruby-brightbox
+    - role: apt
     - role: postgresql
     - role: nginx
 
@@ -29,33 +29,6 @@
         - name: unpack
           shell: 'tar -xzf {{ mktemp.stdout }}/redmine.tar.gz -C {{ redmine_install_dir }}'
 
-        - name: Add custom gems
-          copy:
-            content: '{{ custom_gemfile }}'
-            dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/Gemfile.local'
-
-        - name: Copy redmine configuration file
-          template:
-            src: '{{ playbook_dir }}/templates/configuration.yml.j2'
-            dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/configuration.yml'
-
-        - name: Copy database configuration file
-          template:
-            src: '{{ playbook_dir }}/templates/database.yml.j2'
-            dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/database.yml'
-
-        - name: Copy puma configuration file
-          template:
-            src: '{{ playbook_dir }}/templates/puma.rb.j2'
-            dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/puma.rb'
-
-        - name: assign permissions
-          file:
-            path: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/{{ item }}'
-            state: directory
-            mode: 0777
-          with_items: '{{ access_to_directories }}'
-
       always:
         - name: Remove temp directory
           file:
@@ -63,8 +36,46 @@
             state: absent
           when: mktemp is defined
 
+        - name: Ensure permissions
+          file:
+            path: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
+            state: directory
+            owner: root
+            group: root
+            mode: 0755
+
+    - name: Add custom gems
+      copy:
+        content: '{{ custom_gemfile }}'
+        dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/Gemfile.local'
+
+    - name: Copy redmine configuration file
+      template:
+        src: '{{ playbook_dir }}/templates/configuration.yml.j2'
+        dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/configuration.yml'
+
+    - name: Create redmine user
+      user: name=redmine state=present
+
+    - name: Copy database configuration file
+      template:
+        src: '{{ playbook_dir }}/templates/database.yml.j2'
+        dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/database.yml'
+
+    - name: Copy puma configuration file
+      template:
+        src: '{{ playbook_dir }}/templates/puma.rb.j2'
+        dest: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/config/puma.rb'
+
+    - name: assign permissions
+      file:
+        path: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}/{{ item }}'
+        state: directory
+        mode: 0777
+      with_items: '{{ access_to_directories }}'
+
 - hosts: all
-  become: no
+  become_user: redmine
 
   tasks:
     - name: Bundle install
@@ -77,3 +88,39 @@
         RAILS_ENV: 'production'
       retries: 2
       delay: 10
+
+    - name: db:migrate
+      shell: 'bundle exec rake db:migrate'
+      args:
+        chdir: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
+      environment:
+        RAILS_ENV: production
+
+    - name: Load default database
+      shell: 'bundle exec rake redmine:load_default_data'
+      args:
+        chdir: '{{ redmine_install_dir }}/redmine-{{ redmine_version }}'
+      environment:
+        RAILS_ENV: production
+        REDMINE_LANG: ru
+
+- hosts: all
+  become: yes
+
+  tasks:
+    - name: Copy upstart config
+      template:
+        src: '{{ playbook_dir }}/templates/upstart.conf.j2'
+        dest: '/etc/init/redmine.conf'
+
+    - name: Symlink upstart config to /etc/init.d
+      file:
+        src: '/etc/init/redmine.conf'
+        dest: '/etc/init.d/redmine'
+        state: link
+
+    - name: Restart application
+      service:
+        name: 'redmine'
+        state: restarted
+      become: yes
